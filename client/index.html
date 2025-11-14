@@ -88,9 +88,10 @@
   <footer>
     <small>Built for the Collaborative Canvas assignment — no frameworks, no drawing libraries.</small>
   </footer>
-  <script>window.BACKEND_URL="https://real-time-collaborative-drawing-canvas-s5tn.onrender.com"</script>
+<script src="https://real-time-collaborative-drawing-canvas-s5tn.onrender.com/socket.io/socket.io.js"></script>
   <!-- Socket.io client (served from server) -->
-  <script src="/socket.io/socket.io.js"></script>
+<!-- Socket.IO client from CDN (version should match your server) -->
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <!-- Websocket client protocol (should expose connect/join/send methods) -->
   <script src="websocket.js"></script>
   <!-- Canvas drawing logic (exports an object to control canvases) -->
