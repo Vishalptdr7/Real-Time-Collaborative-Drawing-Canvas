@@ -9,7 +9,7 @@ window.addEventListener("load", () => {
   // -------------------------
 
   const canvas = new CanvasSystem();
-  const ws = new WebSocketClient(window.location.origin);
+  const ws = new WebSocketClient(window.BACKEND_URL || window.location.origin);
 
   // -------------------------
   // 2. UI ELEMENTS

@@ -11,8 +11,12 @@ const roomManager = require("./room");
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: { origin: "*" },
+  cors: {
+    origin: "https://real-time-collaborative-drawing-can-navy.vercel.app/",
+    methods: ["GET", "POST"],
+  },
 });
+
 
 const PORT = process.env.PORT || 3000;
 

@@ -2,7 +2,7 @@
 // Fully aligned with assignment requirements: rooms, batching, protocol, reconnection, latency, user-join sync
 
 class WebSocketClient {
-  constructor(url) {
+  constructor(url = window.BACKEND_URL || window.location.origin) {
     this.socket = io(url, {
       autoConnect: false, // connect only when user clicks Join
       reconnection: true,
