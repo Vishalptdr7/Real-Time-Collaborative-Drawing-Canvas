@@ -2,7 +2,10 @@
 // Fully aligned with assignment requirements: rooms, batching, protocol, reconnection, latency, user-join sync
 
 class WebSocketClient {
-  constructor(url = window.BACKEND_URL || window.location.origin) {
+  constructor(
+    url = "https://real-time-collaborative-drawing-canvas-s5tn.onrender.com/socket.io/socket.io.js" ||
+      window.location.origin
+  ) {
     this.socket = io(url, {
       autoConnect: false, // connect only when user clicks Join
       reconnection: true,
@@ -10,7 +13,7 @@ class WebSocketClient {
       reconnectionDelayMax: 2000,
       timeout: 5000,
     });
-
+    console.log("WebSocketClient initialized with URL:", url);
     this.eventListeners = new Map();
     this.pendingBatch = []; // for batched drawing mode
     this.batchInterval = null;
