@@ -143,10 +143,13 @@ window.addEventListener("load", () => {
     usersList.innerHTML = "";
     for (const u of users) {
       const li = document.createElement("li");
-      li.textContent = `${u.username}`;
+      li.innerHTML = `<span class="user-color-dot" style="background:${
+        u.color
+      }"></span> ${u.username} ${u.id === ws.socket.id ? "(You)" : ""}`;
       usersList.append(li);
     }
   });
+
 
   // -------------------------
   // 7. Connection Status & Latency
