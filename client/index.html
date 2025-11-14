@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Collaborative Canvas</title>
+  <link rel="stylesheet" href="style.css" />
+  <!--
+    Enhanced index.html for the Collaborative Canvas assignment.
+
+    Improvements made:
+    - Split canvas into layered canvases: main (committed), temp (live stroke), cursors (remote cursors)
+    - Added user list / room controls for multi-user testing
+    - Added latency / FPS & connection status display for debugging
+    - Included ARIA attributes for basic accessibility
+    - Kept script loading order (websocket -> canvas -> main) and socket.io client
+    - Comments explain the purpose of key elements so you can hook them from JS
+  -->
+</head>
+<body>
+  <header>
+    <h1>Real-Time Collaborative Drawing</h1>
+    <div id="status-bar" aria-live="polite">
+      <span id="connectionStatus">Disconnected</span>
+      <span id="latency">Latency: -- ms</span>
+      <span id="fps">FPS: --</span>
+    </div>
+  </header>
+
+  <div class="top-controls">
+    <!-- Room controls (useful to test multiple rooms/users locally) -->
+    <label for="roomId">Room:</label>
+    <input id="roomId" type="text" placeholder="room-1" value="default" />
+    <label for="username">Name:</label>
+    <input id="username" type="text" placeholder="Your name" />
+    <button id="joinBtn">Join</button>
+  </div>
+
+  <div class="toolbar" role="toolbar" aria-label="Drawing tools">
+    <label for="colorPicker">Color:</label>
+    <input type="color" id="colorPicker" value="#000000" />
+
+    <label for="strokeWidth">Width:</label>
+    <input type="range" id="strokeWidth" min="1" max="50" value="5" />
+    <span id="strokeValue">5</span>
+
+    <button id="brushBtn" class="tool active" aria-pressed="true">Brush</button>
+    <button id="eraserBtn" class="tool" aria-pressed="false">Eraser</button>
+
+    <button id="undoBtn" title="Undo (global)">Undo</button>
+    <button id="redoBtn" title="Redo (global)">Redo</button>
+
+    <label for="batchMode">Batching:</label>
+    <select id="batchMode">
+      <option value="live">Live (low-latency)</option>
+      <option value="batch">Batched (less messages)</option>
+    </select>
+  </div>
+
+  <main class="canvas-layout">
+    <aside class="sidebar">
+      <h3>Users Online</h3>
+      <ul id="usersList" aria-live="polite"></ul>
+      <h3>Controls</h3>
+      <div id="persistenceControls">
+        <button id="saveBtn">Save Snapshot</button>
+        <button id="loadBtn">Load Snapshot</button>
+      </div>
+      <p class="note">Tip: open this page in multiple tabs to test real-time sync.</p>
+    </aside>
+
+    <section class="canvas-container" aria-label="Drawing canvas">
+      <!-- Layered canvases: keep same width/height and stack with CSS. -->
+      <!-- 1) main-canvas: committed strokes (redraw from history or snapshot) -->
+      <canvas id="main-canvas"></canvas>
+      <!-- 2) temp-canvas: live stroke being drawn locally before commit -->
+      <canvas id="temp-canvas"></canvas>
+      <!-- 3) cursor-canvas: draw remote cursors and indicators -->
+      <canvas id="cursor-canvas"></canvas>
+
+      <!-- Fallback message for older browsers -->
+      <div id="no-canvas-msg" hidden>
+        Your browser does not support HTML5 Canvas. Please use a modern browser.
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <small>Built for the Collaborative Canvas assignment — no frameworks, no drawing libraries.</small>
+  </footer>
+
+  <!-- Socket.io client (served from server) -->
+  <script src="/socket.io/socket.io.js"></script>
+  <!-- Websocket client protocol (should expose connect/join/send methods) -->
+  <script src="websocket.js"></script>
+  <!-- Canvas drawing logic (exports an object to control canvases) -->
+  <script src="canvas.js"></script>
+  <!-- App initialization & UI wiring -->
+  <script src="main.js"></script>
+</body>
+</html>
