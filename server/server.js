@@ -17,7 +17,6 @@ const io = new Server(server, {
   },
 });
 
-
 const PORT = process.env.PORT || 3000;
 
 // -------------------------
@@ -39,7 +38,7 @@ io.on("connection", (socket) => {
   console.log(`User connected: ${socket.id}`);
 
   // -------------------------
-  // JOIN
+  // JOIN ROOM
   // -------------------------
   socket.on("join", ({ roomId, username }) => {
     socket.join(roomId);
@@ -101,24 +100,27 @@ io.on("connection", (socket) => {
   });
 
   // -------------------------
-  // UNDO / REDO
+  // SECURE UNDO (only undo own strokes)
   // -------------------------
   socket.on("undo", () => {
     const r = socket.roomId;
     if (!r) return;
 
-    const inverse = roomManager.undo(r, socket.id);
+    const inverse = roomManager.undoOwn(r, socket.id);
     if (!inverse) return;
 
     const active = roomManager.getActiveOps(r);
     io.to(r).emit("history", active);
   });
 
+  // -------------------------
+  // SECURE REDO (only redo own strokes)
+  // -------------------------
   socket.on("redo", () => {
     const r = socket.roomId;
     if (!r) return;
 
-    const redoOp = roomManager.redo(r, socket.id);
+    const redoOp = roomManager.redoOwn(r, socket.id);
     if (!redoOp) return;
 
     const active = roomManager.getActiveOps(r);

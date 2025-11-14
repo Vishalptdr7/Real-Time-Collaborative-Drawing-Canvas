@@ -3,14 +3,14 @@
 // Works with WebSocketClient + CanvasSystem architecture
 
 const DrawingState = require("./drawing-state");
+
 function uuid() {
   return Math.random().toString(36).substring(2) + Date.now().toString(36);
 }
 
-
 class RoomManager {
   constructor() {
-    this.rooms = new Map(); // roomId → { users, state }
+    this.rooms = new Map(); // roomId → { users, drawingState }
   }
 
   // -------------------------
@@ -20,7 +20,7 @@ class RoomManager {
     if (!this.rooms.has(roomId)) {
       this.rooms.set(roomId, {
         id: roomId,
-        users: new Map(), // socketId → { username, color }
+        users: new Map(), // socketId → user object
         drawingState: new DrawingState(roomId),
       });
     }
@@ -50,7 +50,7 @@ class RoomManager {
     const room = this.getRoom(roomId);
     room.users.delete(socketId);
 
-    // Optional cleanup: remove room if empty
+    // Cleanup: delete room if empty
     if (room.users.size === 0) {
       this.rooms.delete(roomId);
     }
@@ -84,21 +84,41 @@ class RoomManager {
     return room.drawingState.addOperation(operation, userId);
   }
 
-  undo(roomId, userId) {
+  // ❌ Disabled: global undo/redo
+  // undo(roomId, userId) {
+  //   const room = this.getRoom(roomId);
+  //   return room.drawingState.undo(userId);
+  // }
+  //
+  // redo(roomId, userId) {
+  //   const room = this.getRoom(roomId);
+  //   return room.drawingState.redo(userId);
+  // }
+
+  // -------------------------
+  // Secure per-user undo/redo
+  // -------------------------
+  undoOwn(roomId, userId) {
     const room = this.getRoom(roomId);
-    return room.drawingState.undo(userId);
+    return room.drawingState.undoOwn(userId);
   }
 
-  redo(roomId, userId) {
+  redoOwn(roomId, userId) {
     const room = this.getRoom(roomId);
-    return room.drawingState.redo(userId);
+    return room.drawingState.redoOwn(userId);
   }
 
+  // -------------------------
+  // Active state operations
+  // -------------------------
   getActiveOps(roomId) {
     const room = this.getRoom(roomId);
     return room.drawingState.getActiveOperations();
   }
 
+  // -------------------------
+  // Snapshots
+  // -------------------------
   getSnapshot(roomId) {
     return this.getRoom(roomId).drawingState.getSnapshot();
   }

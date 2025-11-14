@@ -1,11 +1,11 @@
 // Advanced DrawingState for real-time multi-user collaborative canvas
-// Upgraded to support:
+// Supports:
 // - Operation-based history with unique IDs
-// - Global undo/redo that is consistent across all users
-// - Inversion-based undo (non-destructive history)
+// - User-owned strokes (only owner can undo/redo)
+// - Inversion-based undo (append-only history)
 // - Snapshots for efficient redraws
 // - Metadata: user, timestamp, room
-// - Server-safe serialization
+// - Secure per-user permissions
 
 const { v4: uuid } = require("uuid");
 
@@ -13,24 +13,22 @@ class DrawingState {
   constructor(roomId) {
     this.roomId = roomId;
 
-    // Full list of operations, never mutated (append-only)
-    // Undo is handled by adding an inverse op rather than removing
+    // Append-only list of operations
     this.operations = [];
 
-    // Optional snapshot to speed up redraw
-    this.snapshot = null; // { pngBase64, opIndex }
+    // Optional snapshot for faster redraw
+    this.snapshot = null;
   }
 
-  // ---------------------
-  // CREATE + STORE OPERATION
-  // ---------------------
-
+  // ----------------------------------------------------------
+  // ADD OPERATION (stroke commit)
+  // ----------------------------------------------------------
   addOperation(op, userId) {
     const operation = {
       id: uuid(),
       userId,
       roomId: this.roomId,
-      type: "stroke", // future: shape, text, image, etc.
+      type: "stroke",
       timestamp: Date.now(),
       ...op,
     };
@@ -39,12 +37,10 @@ class DrawingState {
     return operation;
   }
 
-  // ---------------------
-  // GLOBAL UNDO
-  // ---------------------
-
+  // ----------------------------------------------------------
+  // GLOBAL UNDO (any user can undo last stroke — not used now)
+  // ----------------------------------------------------------
   undo(userId) {
-    // Find last *active* op (not an undo op)
     const last = [...this.operations].reverse().find((o) => !o.inverseOf);
     if (!last) return null;
 
@@ -61,12 +57,10 @@ class DrawingState {
     return inverse;
   }
 
-  // ---------------------
-  // GLOBAL REDO
-  // ---------------------
-
+  // ----------------------------------------------------------
+  // GLOBAL REDO (not used now)
+  // ----------------------------------------------------------
   redo(userId) {
-    // Find last undo op
     const lastUndo = [...this.operations]
       .reverse()
       .find((o) => o.type === "undo");
@@ -84,38 +78,91 @@ class DrawingState {
     this.operations.push(redoOp);
     return redoOp;
   }
-  
 
-  // ---------------------
-  // GET ACTIVE STATE FOR REDRAW
-  // ---------------------
+  // ----------------------------------------------------------
+  // SECURE PER-USER UNDO (core feature)
+  // ----------------------------------------------------------
+  undoOwn(userId) {
+    // find last stroke created by THIS user only
+    for (let i = this.operations.length - 1; i >= 0; i--) {
+      const op = this.operations[i];
 
-  /**
-   * Compute the list of active operations after undo/redo effects
-   */
+      // skip non-stroke operations
+      if (op.type !== "stroke") continue;
+
+      // only undo user's own strokes
+      if (op.userId !== userId) continue;
+
+      const inverse = {
+        id: uuid(),
+        userId,
+        roomId: this.roomId,
+        type: "undo",
+        inverseOf: op.id,
+        timestamp: Date.now(),
+      };
+
+      this.operations.push(inverse);
+      return inverse;
+    }
+
+    return null; // user owns no strokes to undo
+  }
+
+  // ----------------------------------------------------------
+  // SECURE PER-USER REDO
+  // ----------------------------------------------------------
+  redoOwn(userId) {
+    // find last undo done by THIS user
+    for (let i = this.operations.length - 1; i >= 0; i--) {
+      const op = this.operations[i];
+
+      if (op.type !== "undo") continue;
+      if (op.userId !== userId) continue;
+
+      const redoOp = {
+        id: uuid(),
+        userId,
+        roomId: this.roomId,
+        type: "redo",
+        redoOf: op.inverseOf,
+        timestamp: Date.now(),
+      };
+
+      this.operations.push(redoOp);
+      return redoOp;
+    }
+
+    return null; // nothing to redo
+  }
+
+  // ----------------------------------------------------------
+  // ACTIVE OPERATIONS (after undo/redo effects)
+  // ----------------------------------------------------------
   getActiveOperations() {
     const active = new Map();
 
     for (const op of this.operations) {
       if (op.type === "stroke") {
-        active.set(op.id, op);
-      } else if (op.type === "undo") {
-        active.delete(op.inverseOf);
-      } else if (op.type === "redo") {
-        // redo restores previously undone op
-        if (active.has(op.redoOf)) continue;
-        const orig = this.operations.find((o) => o.id === op.redoOf);
-        if (orig) active.set(orig.id, orig);
+        active.set(op.id, op); // add stroke
+      }
+
+      if (op.type === "undo") {
+        active.delete(op.inverseOf); // remove stroke
+      }
+
+      if (op.type === "redo") {
+        const original = this.operations.find((o) => o.id === op.redoOf);
+        if (original) active.set(original.id, original);
       }
     }
 
     return [...active.values()].sort((a, b) => a.timestamp - b.timestamp);
   }
 
-  // ---------------------
-  // SNAPSHOT MANAGEMENT (optional)
-  // ---------------------
-
+  // ----------------------------------------------------------
+  // SNAPSHOTS (optional performance feature)
+  // ----------------------------------------------------------
   saveSnapshot(pngBase64) {
     this.snapshot = {
       pngBase64,
@@ -128,10 +175,9 @@ class DrawingState {
     return this.snapshot;
   }
 
-  // ---------------------
+  // ----------------------------------------------------------
   // SERIALIZATION
-  // ---------------------
-
+  // ----------------------------------------------------------
   toJSON() {
     return {
       roomId: this.roomId,
